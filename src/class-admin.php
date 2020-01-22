@@ -196,6 +196,9 @@ class Admin
 			'https://joinmastodon.org',
 			'https://www.php.net',
 			'https://mariadb.org',
+			'https://pinterest.com/pin/foobar',
+			'https://linkedin.com',
+			'https://linkedin.com/feed/foobar', // to test migration script
 			'https://referrer-1.com',
 			'https://referrer-2.com',
 			'https://referrer-3.com',
