@@ -1,11 +1,5 @@
-/**
- * @package koko-analytics
- * @author Danny van Kooten
- * @license GPL-3.0+
- */
-window.addEventListener('load', function () {
-  const config = window.koko_analytics
-  const postId = String(config.post_id)
+(function() {
+  const global = window.koko_analytics
 
   function getCookie (name) {
     if (!document.cookie) {
@@ -28,13 +22,16 @@ window.addEventListener('load', function () {
     name = window.encodeURIComponent(name)
     data = window.encodeURIComponent(String(data))
     let str = name + '=' + data
-    str += ';path=' + config.cookie_path + ';SameSite=Lax;expires=' + expires.toUTCString()
+    str += ';path=' + global.cookie_path + ';SameSite=Lax;expires=' + expires.toUTCString()
     document.cookie = str
   }
 
-  function trackPageview () {
+  global.track = function (args) {
+    // TODO: Make postID required if supplying function arguments
+    args = args || {};
+
     // do not track if "Do Not Track" is enabled
-    if ('doNotTrack' in navigator && navigator.doNotTrack === '1' && config.honor_dnt) {
+    if ('doNotTrack' in navigator && navigator.doNotTrack === '1' && global.honor_dnt) {
       return
     }
 
@@ -53,21 +50,22 @@ window.addEventListener('load', function () {
       return
     }
 
-    const cookie = config.use_cookie ? getCookie('_koko_analytics_pages_viewed') : ''
+    const postId = args.postId !== undefined ? String(args.postId) : String(global.post_id)
+    const cookie = global.use_cookie ? getCookie('_koko_analytics_pages_viewed') : ''
+    let newVisitor = args.newVisitor !== undefined ? args.newVisitor : cookie.length === 0
     const pagesViewed = cookie.split(',').filter(function (id) {
       return id !== ''
     })
-    let isNewVisitor = cookie.length === 0
-    let isUniquePageview = pagesViewed.indexOf(postId) === -1
-    let referrer = ''
+    let uniquePageview = args.uniquePageview !== undefined ? args.uniquePageview : pagesViewed.indexOf(postId) === -1
+    let referrer = args.referrer || '';
 
-    // add referrer if not from same-site & try to detect returning visitors from referrer URL
-    if (typeof (document.referrer) === 'string' && document.referrer !== '') {
+    // add referrer if not from same-site & try to detect returning visitors from referrer URL (but only if called without arguments)
+    if (args.postId === undefined && typeof (document.referrer) === 'string' && document.referrer !== '') {
       if (document.referrer.indexOf(window.location.origin) === 0) {
-        isNewVisitor = false // referred by same-site, so not a new visitor
+        newVisitor = false // referred by same-site, so not a new visitor
 
         if (document.referrer === window.location.href) {
-          isUniquePageview = false // referred by same-url, so not a unique pageview
+          uniquePageview = false // referred by same-url, so not a unique pageview
         }
       } else {
         referrer = document.referrer // referred by external site, so send referrer URL to be stored
@@ -79,7 +77,7 @@ window.addEventListener('load', function () {
     img.onload = function () {
       document.body.removeChild(img)
 
-      if (config.use_cookie) {
+      if (global.use_cookie) {
         if (pagesViewed.indexOf(postId) === -1) {
           pagesViewed.push(postId)
         }
@@ -92,14 +90,21 @@ window.addEventListener('load', function () {
     // build tracker URL
     let queryStr = ''
     queryStr += 'p=' + postId
-    queryStr += '&nv=' + (isNewVisitor ? '1' : '0')
-    queryStr += '&up=' + (isUniquePageview ? '1' : '0')
+    queryStr += '&nv=' + (newVisitor ? '1' : '0')
+    queryStr += '&up=' + (uniquePageview ? '1' : '0')
     queryStr += '&r=' + encodeURIComponent(referrer)
-    img.src = config.tracker_url + (config.tracker_url.indexOf('?') > -1 ? '&' : '?') + queryStr
+    img.src = global.tracker_url + (global.tracker_url.indexOf('?') > -1 ? '&' : '?') + queryStr
 
     // add to DOM to fire request
     document.body.appendChild(img)
   }
+}())
 
-  trackPageview()
+/**
+ * @package koko-analytics
+ * @author Danny van Kooten
+ * @license GPL-3.0+
+ */
+window.addEventListener('load', function()  {
+  window.koko_analytics.track()
 })
